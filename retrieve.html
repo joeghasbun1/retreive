@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Retrieve">
+  <meta name="theme-color" content="#0f172a">
+  <title>RETRIEVE — Training Tracker</title>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlJFVFJJRVZFIFRyYWluaW5nIFRyYWNrZXIiLAogICJzaG9ydF9uYW1lIjogIlJldHJpZXZlIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwZjE3MmEiLAogICJ0aGVtZV9jb2xvciI6ICIjMGYxNzJhIiwKICAib3JpZW50YXRpb24iOiAicG9ydHJhaXQiCn0=">
+  
+  <!-- App Icon (SVG as data URI) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzBmMTcyYSIvPjx0ZXh0IHg9IjkwIiB5PSIxMDUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI3MCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMxMGI5ODEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlI8L3RleHQ+PC9zdmc+">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-green: #10b981;
+      --accent-green-dark: #059669;
+      --accent-blue: #3b82f6;
+      --accent-red: #ef4444;
+      --accent-yellow: #f59e0b;
+      --border: #334155;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      overflow-x: hidden;
+    }
+    
+    html {
+      height: -webkit-fill-available;
+    }
+    
+    /* Header */
+    .header {
+      background: var(--bg-secondary);
+      padding: 16px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .header-content {
+      max-width: 500px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--accent-green);
+    }
+    
+    .save-indicator {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .save-indicator.saving {
+      color: var(--accent-yellow);
+    }
+    
+    .save-indicator.saved {
+      color: var(--accent-green);
+    }
+    
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    
+    /* Date Navigator */
+    .date-nav {
+      background: var(--bg-secondary);
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .date-nav-content {
+      max-width: 500px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .nav-btn {
+      background: var(--bg-tertiary);
+      border: none;
+      color: var(--text-primary);
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    
+    .nav-btn:active {
+      background: var(--border);
+    }
+    
+    .date-info {
+      text-align: center;
+    }
+    
+    .date-main {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .date-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .session-badge {
+      display: inline-block;
+      background: var(--bg-tertiary);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      margin-top: 6px;
+      color: var(--accent-green);
+      font-weight: 500;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      max-width: 500px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-primary);
+      position: sticky;
+      top: 65px;
+      z-index: 99;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 14px 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+    }
+    
+    .tab.active {
+      color: var(--accent-green);
+    }
+    
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 20%;
+      right: 20%;
+      height: 3px;
+      background: var(--accent-green);
+      border-radius: 3px 3px 0 0;
+    }
+    
+    /* Content */
+    .content {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: 100px;
+    }
+    
+    .card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    
+    .card-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+    
+    .input {
+      width: 100%;
+      background: var(--bg-tertiary);
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 17px;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    
+    .input:focus {
+      border-color: var(--accent-green);
+    }
+    
+    .input::placeholder {
+      color: var(--text-muted);
+    }
+    
+    textarea.input {
+      resize: none;
+      min-height: 100px;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+    
+    /* Toggle Buttons */
+    .toggle-group {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .toggle-btn {
+      flex: 1;
+      padding: 16px;
+      border-radius: 12px;
+      border: 2px solid var(--bg-tertiary);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .toggle-btn.active-yes {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+    
+    .toggle-btn.active-no {
+      background: var(--accent-red);
+      border-color: var(--accent-red);
+    }
+    
+    /* Rating Buttons */
+    .rating-group {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .rating-btn {
+      flex: 1;
+      padding: 12px 4px;
+      border-radius: 8px;
+      border: none;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .rating-btn.active {
+      background: var(--accent-green);
+      color: white;
+    }
+    
+    .rating-btn.active-blue {
+      background: var(--accent-blue);
+      color: white;
+    }
+    
+    /* Sessions Counter */
+    .sessions-group {
+      display: flex;
+      gap: 6px;
+    }
+    
+    .session-btn {
+      flex: 1;
+      padding: 14px 8px;
+      border-radius: 10px;
+      border: none;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .session-btn.active {
+      background: var(--accent-green);
+      color: white;
+    }
+    
+    /* Grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    
+    /* Primary Button */
+    .btn-primary {
+      width: 100%;
+      padding: 18px;
+      border-radius: 14px;
+      border: none;
+      background: var(--accent-blue);
+      color: white;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background 0.2s;
+      margin-top: 20px;
+    }
+    
+    .btn-primary:active {
+      background: #2563eb;
+    }
+    
+    .btn-primary:disabled {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+    }
+    
+    /* Section Title */
+    .section-title {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      padding-left: 4px;
+    }
+    
+    /* Footer */
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 12px 20px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    
+    .footer-content {
+      max-width: 500px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    
+    .target-text {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    
+    .target-highlight {
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+    
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 200;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    }
+    
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    
+    .toast.success {
+      background: var(--accent-green);
+    }
+    
+    .toast.error {
+      background: var(--accent-red);
+    }
+    
+    /* Loading Screen */
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .loading-logo {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--accent-green);
+      margin-bottom: 20px;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--bg-tertiary);
+      border-top-color: var(--accent-green);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Hide content until loaded */
+    .app-content {
+      display: none;
+    }
+    
+    .app-content.loaded {
+      display: block;
+    }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="loading-logo">R</div>
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- App Content -->
+  <div class="app-content" id="appContent">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">RETRIEVE</div>
+        <div class="save-indicator" id="saveIndicator">
+          <span class="dot"></span>
+          <span id="saveText">Saved</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Date Navigator -->
+    <div class="date-nav">
+      <div class="date-nav-content">
+        <button class="nav-btn" id="prevDay">←</button>
+        <div class="date-info">
+          <div class="date-main" id="dateMain">MON — Jan 5</div>
+          <div class="date-sub" id="dateSub">Week 1</div>
+          <div class="session-badge" id="sessionBadge">Upper A (Gym)</div>
+        </div>
+        <button class="nav-btn" id="nextDay">→</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="daily">Daily</button>
+      <button class="tab" data-tab="lifts">Lifts</button>
+      <button class="tab" data-tab="weekly">Weekly</button>
+      <button class="tab" data-tab="body">Body</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Daily Tab -->
+      <div id="daily-tab" class="tab-content">
+        <div class="card">
+          <div class="card-label">Weight (kg)</div>
+          <input type="number" step="0.1" class="input" id="weight" placeholder="77.3" inputmode="decimal">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Session Completed?</div>
+          <div class="toggle-group">
+            <button class="toggle-btn" id="sessionYes">✓ Yes</button>
+            <button class="toggle-btn" id="sessionNo">✗ No</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Protein (g)</div>
+          <input type="number" class="input" id="protein" placeholder="145" inputmode="numeric">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Water (L)</div>
+          <input type="number" step="0.5" class="input" id="water" placeholder="3.0" inputmode="decimal">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Sleep (hours)</div>
+          <input type="number" step="0.5" class="input" id="sleep" placeholder="7.0" inputmode="decimal">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Nutrition (1-10)</div>
+          <div class="rating-group" id="nutritionRating"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Energy (1-10)</div>
+          <div class="rating-group" id="energyRating"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Notes</div>
+          <textarea class="input" id="notes" placeholder="Any observations, issues, wins..."></textarea>
+        </div>
+      </div>
+
+      <!-- Lifts Tab -->
+      <div id="lifts-tab" class="tab-content" style="display:none;">
+        <div class="section-title">Week <span id="liftsWeek">1</span> — Best sets (kg × reps)</div>
+        
+        <div class="card">
+          <div class="card-label">Overhead Press</div>
+          <input type="text" class="input" id="lift-ohp" placeholder="40kg × 8">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Incline DB Press</div>
+          <input type="text" class="input" id="lift-incline" placeholder="20kg × 10">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Pull-ups</div>
+          <input type="text" class="input" id="lift-pullups" placeholder="BW × 10">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Barbell Row</div>
+          <input type="text" class="input" id="lift-row" placeholder="65kg × 8">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Squat</div>
+          <input type="text" class="input" id="lift-squat" placeholder="80kg × 6">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Romanian Deadlift</div>
+          <input type="text" class="input" id="lift-rdl" placeholder="70kg × 10">
+        </div>
+      </div>
+
+      <!-- Weekly Tab -->
+      <div id="weekly-tab" class="tab-content" style="display:none;">
+        <div class="section-title">Week <span id="weeklyWeek">1</span> Summary</div>
+
+        <div class="card">
+          <div class="card-label">Sessions Completed</div>
+          <div class="sessions-group" id="sessionsGroup"></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-label">Start Weight (kg)</div>
+            <input type="number" step="0.1" class="input" id="weekStartWeight" placeholder="77.3" inputmode="decimal">
+          </div>
+          <div class="card">
+            <div class="card-label">End Weight (kg)</div>
+            <input type="number" step="0.1" class="input" id="weekEndWeight" placeholder="76.8" inputmode="decimal">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Average Sleep (hours)</div>
+          <input type="number" step="0.5" class="input" id="weekAvgSleep" placeholder="6.5" inputmode="decimal">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Weekly Notes</div>
+          <textarea class="input" id="weekNotes" placeholder="How did the week go? Issues? Adjustments needed?"></textarea>
+        </div>
+
+        <button class="btn-primary" id="downloadReport">
+          📄 Download Week Report
+        </button>
+      </div>
+
+      <!-- Body Tab -->
+      <div id="body-tab" class="tab-content" style="display:none;">
+        <div class="section-title">Monthly Measurements — <span id="bodyMonth">Jan</span></div>
+
+        <div class="card">
+          <div class="card-label">Weight (kg)</div>
+          <input type="number" step="0.1" class="input" id="bodyWeight" placeholder="77.3" inputmode="decimal">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Waist (cm)</div>
+          <input type="number" step="0.5" class="input" id="bodyWaist" placeholder="85" inputmode="decimal">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Shoulders (cm)</div>
+          <input type="number" step="0.5" class="input" id="bodyShoulders" placeholder="115" inputmode="decimal">
+        </div>
+
+        <div class="card">
+          <div class="card-label">Chest (cm)</div>
+          <input type="number" step="0.5" class="input" id="bodyChest" placeholder="100" inputmode="decimal">
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-label">Left Arm (cm)</div>
+            <input type="number" step="0.5" class="input" id="bodyArmL" placeholder="35" inputmode="decimal">
+          </div>
+          <div class="card">
+            <div class="card-label">Right Arm (cm)</div>
+            <input type="number" step="0.5" class="input" id="bodyArmR" placeholder="35" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="target-text">
+          Target: <span class="target-highlight">71-73kg @ 12-14% BF</span> by March 30
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ==================== APP STATE ====================
+    const APP_VERSION = '1.0.0';
+    const STORAGE_KEYS = {
+      entries: 'retrieve_entries_v1',
+      lifts: 'retrieve_lifts_v1',
+      weekly: 'retrieve_weekly_v1',
+      measurements: 'retrieve_measurements_v1'
+    };
+
+    let state = {
+      currentDate: new Date(),
+      entries: {},
+      lifts: {},
+      weekly: {},
+      measurements: {},
+      activeTab: 'daily',
+      saveTimeout: null
+    };
+
+    // ==================== UTILITIES ====================
+    function formatDate(date) {
+      return date.toISOString().split('T')[0];
+    }
+
+    function getWeekNumber(date) {
+      const start = new Date(2026, 0, 5);
+      const diff = Math.floor((date - start) / (7 * 24 * 60 * 60 * 1000));
+      return Math.max(1, Math.min(12, diff + 1));
+    }
+
+    function getDayName(date) {
+      return ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][date.getDay()];
+    }
+
+    function getMonthName(date) {
+      return date.toLocaleString('en', { month: 'short' });
+    }
+
+    function getScheduledSession(date) {
+      const day = date.getDay();
+      const sessions = {
+        0: 'Boxing / Run',
+        1: 'Upper A (Gym)',
+        2: 'Lower A (Gym)',
+        3: 'Boxing',
+        4: 'Upper B (Gym)',
+        5: 'REST',
+        6: 'Lower B + Run'
+      };
+      return sessions[day];
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast ' + type + ' show';
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function updateSaveIndicator(status) {
+      const indicator = document.getElementById('saveIndicator');
+      const text = document.getElementById('saveText');
+      indicator.className = 'save-indicator ' + status;
+      text.textContent = status === 'saving' ? 'Saving...' : 'Saved';
+    }
+
+    // ==================== STORAGE ====================
+    function loadData() {
+      try {
+        const entries = localStorage.getItem(STORAGE_KEYS.entries);
+        const lifts = localStorage.getItem(STORAGE_KEYS.lifts);
+        const weekly = localStorage.getItem(STORAGE_KEYS.weekly);
+        const measurements = localStorage.getItem(STORAGE_KEYS.measurements);
+
+        if (entries) state.entries = JSON.parse(entries);
+        if (lifts) state.lifts = JSON.parse(lifts);
+        if (weekly) state.weekly = JSON.parse(weekly);
+        if (measurements) state.measurements = JSON.parse(measurements);
+      } catch (e) {
+        console.error('Load error:', e);
+      }
+    }
+
+    function saveData() {
+      updateSaveIndicator('saving');
+      
+      if (state.saveTimeout) clearTimeout(state.saveTimeout);
+      
+      state.saveTimeout = setTimeout(() => {
+        try {
+          localStorage.setItem(STORAGE_KEYS.entries, JSON.stringify(state.entries));
+          localStorage.setItem(STORAGE_KEYS.lifts, JSON.stringify(state.lifts));
+          localStorage.setItem(STORAGE_KEYS.weekly, JSON.stringify(state.weekly));
+          localStorage.setItem(STORAGE_KEYS.measurements, JSON.stringify(state.measurements));
+          updateSaveIndicator('saved');
+        } catch (e) {
+          console.error('Save error:', e);
+          showToast('Save failed!', 'error');
+        }
+      }, 500);
+    }
+
+    // ==================== DATA ACCESSORS ====================
+    function getCurrentEntry() {
+      const key = formatDate(state.currentDate);
+      return state.entries[key] || {};
+    }
+
+    function updateCurrentEntry(field, value) {
+      const key = formatDate(state.currentDate);
+      if (!state.entries[key]) state.entries[key] = { date: key };
+      state.entries[key][field] = value;
+      saveData();
+    }
+
+    function getCurrentLifts() {
+      const week = getWeekNumber(state.currentDate);
+      return state.lifts[week] || {};
+    }
+
+    function updateCurrentLifts(field, value) {
+      const week = getWeekNumber(state.currentDate);
+      if (!state.lifts[week]) state.lifts[week] = { week };
+      state.lifts[week][field] = value;
+      saveData();
+    }
+
+    function getCurrentWeekly() {
+      const week = getWeekNumber(state.currentDate);
+      return state.weekly[week] || {};
+    }
+
+    function updateCurrentWeekly(field, value) {
+      const week = getWeekNumber(state.currentDate);
+      if (!state.weekly[week]) state.weekly[week] = { week };
+      state.weekly[week][field] = value;
+      saveData();
+    }
+
+    function getCurrentMeasurements() {
+      const month = getMonthName(state.currentDate);
+      return state.measurements[month] || {};
+    }
+
+    function updateCurrentMeasurements(field, value) {
+      const month = getMonthName(state.currentDate);
+      if (!state.measurements[month]) state.measurements[month] = { month };
+      state.measurements[month][field] = value;
+      saveData();
+    }
+
+    // ==================== UI RENDERING ====================
+    function renderDateNav() {
+      const date = state.currentDate;
+      const dayName = getDayName(date);
+      const monthDay = date.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+      const week = getWeekNumber(date);
+      const session = getScheduledSession(date);
+
+      document.getElementById('dateMain').textContent = `${dayName} — ${monthDay}`;
+      document.getElementById('dateSub').textContent = `Week ${week}`;
+      document.getElementById('sessionBadge').textContent = session;
+      
+      // Update week numbers in other tabs
+      document.getElementById('liftsWeek').textContent = week;
+      document.getElementById('weeklyWeek').textContent = week;
+      document.getElementById('bodyMonth').textContent = getMonthName(date);
+    }
+
+    function renderRatingButtons(containerId, currentValue, onSelect, isBlue = false) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      
+      for (let i = 1; i <= 10; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'rating-btn' + (currentValue === i ? (isBlue ? ' active-blue' : ' active') : '');
+        btn.textContent = i;
+        btn.onclick = () => onSelect(i);
+        container.appendChild(btn);
+      }
+    }
+
+    function renderSessionsButtons(currentValue) {
+      const container = document.getElementById('sessionsGroup');
+      container.innerHTML = '';
+      
+      for (let i = 0; i <= 6; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'session-btn' + (currentValue === i ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick = () => {
+          updateCurrentWeekly('sessionsCompleted', i);
+          renderWeeklyTab();
+        };
+        container.appendChild(btn);
+      }
+    }
+
+    function renderDailyTab() {
+      const entry = getCurrentEntry();
+      
+      document.getElementById('weight').value = entry.weight || '';
+      document.getElementById('protein').value = entry.protein || '';
+      document.getElementById('water').value = entry.water || '';
+      document.getElementById('sleep').value = entry.sleep || '';
+      document.getElementById('notes').value = entry.notes || '';
+
+      // Session completed buttons
+      const yesBtn = document.getElementById('sessionYes');
+      const noBtn = document.getElementById('sessionNo');
+      yesBtn.className = 'toggle-btn' + (entry.sessionCompleted === true ? ' active-yes' : '');
+      noBtn.className = 'toggle-btn' + (entry.sessionCompleted === false ? ' active-no' : '');
+
+      // Rating buttons
+      renderRatingButtons('nutritionRating', entry.nutrition, (val) => {
+        updateCurrentEntry('nutrition', val);
+        renderDailyTab();
+      });
+      
+      renderRatingButtons('energyRating', entry.energy, (val) => {
+        updateCurrentEntry('energy', val);
+        renderDailyTab();
+      }, true);
+    }
+
+    function renderLiftsTab() {
+      const lifts = getCurrentLifts();
+      
+      document.getElementById('lift-ohp').value = lifts.ohp || '';
+      document.getElementById('lift-incline').value = lifts.incline || '';
+      document.getElementById('lift-pullups').value = lifts.pullups || '';
+      document.getElementById('lift-row').value = lifts.row || '';
+      document.getElementById('lift-squat').value = lifts.squat || '';
+      document.getElementById('lift-rdl').value = lifts.rdl || '';
+    }
+
+    function renderWeeklyTab() {
+      const weekly = getCurrentWeekly();
+      
+      document.getElementById('weekStartWeight').value = weekly.startWeight || '';
+      document.getElementById('weekEndWeight').value = weekly.endWeight || '';
+      document.getElementById('weekAvgSleep').value = weekly.avgSleep || '';
+      document.getElementById('weekNotes').value = weekly.notes || '';
+      
+      renderSessionsButtons(weekly.sessionsCompleted);
+    }
+
+    function renderBodyTab() {
+      const meas = getCurrentMeasurements();
+      
+      document.getElementById('bodyWeight').value = meas.weight || '';
+      document.getElementById('bodyWaist').value = meas.waist || '';
+      document.getElementById('bodyShoulders').value = meas.shoulders || '';
+      document.getElementById('bodyChest').value = meas.chest || '';
+      document.getElementById('bodyArmL').value = meas.armL || '';
+      document.getElementById('bodyArmR').value = meas.armR || '';
+    }
+
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+      
+      // Update tab buttons
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+      });
+      
+      // Show/hide content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+      });
+      document.getElementById(tabName + '-tab').style.display = 'block';
+      
+      // Render tab content
+      if (tabName === 'daily') renderDailyTab();
+      else if (tabName === 'lifts') renderLiftsTab();
+      else if (tabName === 'weekly') renderWeeklyTab();
+      else if (tabName === 'body') renderBodyTab();
+    }
+
+    // ==================== REPORT GENERATION ====================
+    function generateReport() {
+      const week = getWeekNumber(state.currentDate);
+      const weekEntries = Object.values(state.entries).filter(e => {
+        const entryDate = new Date(e.date);
+        return getWeekNumber(entryDate) === week;
+      }).sort((a, b) => a.date.localeCompare(b.date));
+
+      const lifts = state.lifts[week] || {};
+      const weekly = state.weekly[week] || {};
+
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>RETRIEVE Week ${week} Report</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 30px; max-width: 800px; margin: 0 auto; }
+    h1 { color: #0f172a; border-bottom: 3px solid #10b981; padding-bottom: 15px; }
+    h2 { color: #1e293b; margin-top: 30px; }
+    .meta { color: #64748b; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th { background: #0f172a; color: white; padding: 12px; text-align: left; }
+    td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .summary { background: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; }
+    .summary li { margin: 8px 0; }
+    .note { background: #fefce8; border-left: 4px solid #f59e0b; padding: 15px; margin-top: 30px; }
+    .check { color: #10b981; }
+    .cross { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <h1>RETRIEVE — Week ${week} Report</h1>
+  <p class="meta">Generated: ${new Date().toLocaleString()}</p>
+
+  <h2>📅 Daily Entries</h2>
+  <table>
+    <tr>
+      <th>Date</th>
+      <th>Weight</th>
+      <th>Session</th>
+      <th>Protein</th>
+      <th>Water</th>
+      <th>Sleep</th>
+      <th>Nutr</th>
+      <th>Energy</th>
+    </tr>
+    ${weekEntries.map(e => `
+    <tr>
+      <td>${e.date}</td>
+      <td>${e.weight || '—'} kg</td>
+      <td>${e.sessionCompleted === true ? '<span class="check">✓</span>' : e.sessionCompleted === false ? '<span class="cross">✗</span>' : '—'}</td>
+      <td>${e.protein || '—'}g</td>
+      <td>${e.water || '—'}L</td>
+      <td>${e.sleep || '—'}h</td>
+      <td>${e.nutrition || '—'}/10</td>
+      <td>${e.energy || '—'}/10</td>
+    </tr>`).join('')}
+  </table>
+
+  <h2>🏋️ Key Lifts</h2>
+  <table>
+    <tr>
+      <th>OHP</th>
+      <th>Incline DB</th>
+      <th>Pull-ups</th>
+      <th>BB Row</th>
+      <th>Squat</th>
+      <th>RDL</th>
+    </tr>
+    <tr>
+      <td>${lifts.ohp || '—'}</td>
+      <td>${lifts.incline || '—'}</td>
+      <td>${lifts.pullups || '—'}</td>
+      <td>${lifts.row || '—'}</td>
+      <td>${lifts.squat || '—'}</td>
+      <td>${lifts.rdl || '—'}</td>
+    </tr>
+  </table>
+
+  <h2>📊 Weekly Summary</h2>
+  <div class="summary">
+    <ul>
+      <li><strong>Sessions Completed:</strong> ${weekly.sessionsCompleted ?? '—'}/6</li>
+      <li><strong>Start Weight:</strong> ${weekly.startWeight || '—'} kg</li>
+      <li><strong>End Weight:</strong> ${weekly.endWeight || '—'} kg</li>
+      <li><strong>Avg Sleep:</strong> ${weekly.avgSleep || '—'} hours</li>
+    </ul>
+  </div>
+
+  ${weekly.notes ? `<h2>📝 Notes</h2><p>${weekly.notes}</p>` : ''}
+
+  <div class="note">
+    <strong>For Retrieve:</strong> Send this report to Claude for analysis and system adjustments.
+  </div>
+</body>
+</html>`;
+
+      // Download
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `RETRIEVE_Week${week}_Report.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast('Report downloaded!', 'success');
+    }
+
+    // ==================== EVENT LISTENERS ====================
+    function setupEventListeners() {
+      // Date navigation
+      document.getElementById('prevDay').onclick = () => {
+        state.currentDate.setDate(state.currentDate.getDate() - 1);
+        renderDateNav();
+        switchTab(state.activeTab);
+      };
+
+      document.getElementById('nextDay').onclick = () => {
+        state.currentDate.setDate(state.currentDate.getDate() + 1);
+        renderDateNav();
+        switchTab(state.activeTab);
+      };
+
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.onclick = () => switchTab(tab.dataset.tab);
+      });
+
+      // Daily inputs
+      document.getElementById('weight').oninput = (e) => updateCurrentEntry('weight', e.target.value);
+      document.getElementById('protein').oninput = (e) => updateCurrentEntry('protein', e.target.value);
+      document.getElementById('water').oninput = (e) => updateCurrentEntry('water', e.target.value);
+      document.getElementById('sleep').oninput = (e) => updateCurrentEntry('sleep', e.target.value);
+      document.getElementById('notes').oninput = (e) => updateCurrentEntry('notes', e.target.value);
+
+      document.getElementById('sessionYes').onclick = () => {
+        updateCurrentEntry('sessionCompleted', true);
+        renderDailyTab();
+      };
+      document.getElementById('sessionNo').onclick = () => {
+        updateCurrentEntry('sessionCompleted', false);
+        renderDailyTab();
+      };
+
+      // Lifts inputs
+      document.getElementById('lift-ohp').oninput = (e) => updateCurrentLifts('ohp', e.target.value);
+      document.getElementById('lift-incline').oninput = (e) => updateCurrentLifts('incline', e.target.value);
+      document.getElementById('lift-pullups').oninput = (e) => updateCurrentLifts('pullups', e.target.value);
+      document.getElementById('lift-row').oninput = (e) => updateCurrentLifts('row', e.target.value);
+      document.getElementById('lift-squat').oninput = (e) => updateCurrentLifts('squat', e.target.value);
+      document.getElementById('lift-rdl').oninput = (e) => updateCurrentLifts('rdl', e.target.value);
+
+      // Weekly inputs
+      document.getElementById('weekStartWeight').oninput = (e) => updateCurrentWeekly('startWeight', e.target.value);
+      document.getElementById('weekEndWeight').oninput = (e) => updateCurrentWeekly('endWeight', e.target.value);
+      document.getElementById('weekAvgSleep').oninput = (e) => updateCurrentWeekly('avgSleep', e.target.value);
+      document.getElementById('weekNotes').oninput = (e) => updateCurrentWeekly('notes', e.target.value);
+
+      // Body inputs
+      document.getElementById('bodyWeight').oninput = (e) => updateCurrentMeasurements('weight', e.target.value);
+      document.getElementById('bodyWaist').oninput = (e) => updateCurrentMeasurements('waist', e.target.value);
+      document.getElementById('bodyShoulders').oninput = (e) => updateCurrentMeasurements('shoulders', e.target.value);
+      document.getElementById('bodyChest').oninput = (e) => updateCurrentMeasurements('chest', e.target.value);
+      document.getElementById('bodyArmL').oninput = (e) => updateCurrentMeasurements('armL', e.target.value);
+      document.getElementById('bodyArmR').oninput = (e) => updateCurrentMeasurements('armR', e.target.value);
+
+      // Download report
+      document.getElementById('downloadReport').onclick = generateReport;
+    }
+
+    // ==================== INITIALIZATION ====================
+    function init() {
+      loadData();
+      setupEventListeners();
+      renderDateNav();
+      renderDailyTab();
+
+      // Hide loading, show app
+      setTimeout(() => {
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('appContent').classList.add('loaded');
+      }, 600);
+    }
+
+    // Start app
+    document.addEventListener('DOMContentLoaded', init);
+
+    // Register Service Worker for offline support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        // For a single-file PWA, we'll use a minimal approach
+        // The app works offline because it's a single HTML file
+      });
+    }
+  </script>
+</body>
+</html>
