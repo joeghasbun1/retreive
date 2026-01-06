@@ -81,9 +81,7 @@
       border-radius: 50%;
       background: currentColor;
     }
-    .dot.pulse {
-      animation: pulse 1s infinite;
-    }
+    .dot.pulse { animation: pulse 1s infinite; }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
@@ -382,9 +380,9 @@
       <div class="date-nav-content">
         <button class="nav-btn" id="prevDay">←</button>
         <div class="date-info">
-          <div class="date-main" id="dateMain">MON — Jan 5</div>
+          <div class="date-main" id="dateMain">MON — Jan 6</div>
           <div class="date-sub" id="dateSub">Week 1</div>
-          <div class="session-badge" id="sessionBadge">Upper A (Gym)</div>
+          <div class="session-badge" id="sessionBadge">Upper A</div>
         </div>
         <button class="nav-btn" id="nextDay">→</button>
       </div>
@@ -430,6 +428,24 @@
           <div class="card-label">Energy (1-10)</div>
           <div class="rating-group" id="energyRating"></div>
         </div>
+        <div class="card" id="runningCard" style="display:none; border: 2px solid var(--accent-green);">
+          <div class="card-label" style="color: var(--accent-green);">🏃 Running</div>
+          <div>
+            <div class="card-label" style="font-size: 11px;">Time (min) *</div>
+            <input type="number" class="input" id="runTime" placeholder="30" inputmode="numeric" style="margin-bottom: 12px;">
+          </div>
+          <div class="grid-2">
+            <div>
+              <div class="card-label" style="font-size: 11px;">Distance (km) — optional</div>
+              <input type="number" step="0.1" class="input" id="runDistance" placeholder="—" inputmode="decimal">
+            </div>
+            <div>
+              <div class="card-label" style="font-size: 11px;">Pace (auto)</div>
+              <div id="runPace" style="background: var(--bg-tertiary); padding: 14px 16px; border-radius: 12px; color: var(--accent-green); font-weight: 600; height: 49px; display: flex; align-items: center;">—</div>
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-label">Notes</div>
           <textarea class="input" id="notes" placeholder="Any observations, issues, wins..."></textarea>
@@ -439,24 +455,24 @@
       <div id="lifts-tab" class="tab-content" style="display:none;">
         <div class="section-title">Week <span id="liftsWeek">1</span> — Best sets (kg × reps)</div>
         <div class="card">
-          <div class="card-label">Overhead Press</div>
-          <input type="text" class="input" id="lift-ohp" placeholder="40kg × 8">
+          <div class="card-label">Incline Bench Press</div>
+          <input type="text" class="input" id="lift-incline" placeholder="60kg × 8">
         </div>
         <div class="card">
-          <div class="card-label">Incline DB Press</div>
-          <input type="text" class="input" id="lift-incline" placeholder="20kg × 10">
+          <div class="card-label">Shoulder Press</div>
+          <input type="text" class="input" id="lift-ohp" placeholder="40kg × 10">
         </div>
         <div class="card">
           <div class="card-label">Pull-ups</div>
-          <input type="text" class="input" id="lift-pullups" placeholder="BW × 10">
+          <input type="text" class="input" id="lift-pullups" placeholder="BW+5kg × 5">
         </div>
         <div class="card">
           <div class="card-label">Barbell Row</div>
-          <input type="text" class="input" id="lift-row" placeholder="65kg × 8">
+          <input type="text" class="input" id="lift-row" placeholder="65kg × 10">
         </div>
         <div class="card">
-          <div class="card-label">Squat</div>
-          <input type="text" class="input" id="lift-squat" placeholder="80kg × 6">
+          <div class="card-label">Back Squat</div>
+          <input type="text" class="input" id="lift-squat" placeholder="80kg × 5">
         </div>
         <div class="card">
           <div class="card-label">Romanian Deadlift</div>
@@ -533,7 +549,7 @@
 
   <script>
     // =====================================================
-    // FIREBASE CONFIG — REPLACE WITH YOUR OWN
+    // FIREBASE CONFIG
     // =====================================================
     const firebaseConfig = {
       apiKey: "AIzaSyC5KsRYObEKpaSIwuyK4G7651_xeog5g6A",
@@ -546,17 +562,17 @@
     };
     // =====================================================
 
-    // Initialize Firebase
     let db;
     let isOnline = navigator.onLine;
     let dataLoaded = false;
+    let isSaving = false;
+    let pendingUpdates = {};
+    let saveTimeouts = {};
+    let ignoreNextUpdate = {};
 
     try {
       firebase.initializeApp(firebaseConfig);
       db = firebase.database();
-      
-      // Enable offline persistence
-      db.goOnline();
     } catch (e) {
       console.error('Firebase init error:', e);
     }
@@ -568,17 +584,18 @@
       lifts: {},
       weekly: {},
       measurements: {},
-      activeTab: 'daily',
-      saveTimeout: null
+      activeTab: 'daily'
     };
 
-    // Utilities
+    // =====================================================
+    // UTILITIES
+    // =====================================================
     function formatDate(date) {
       return date.toISOString().split('T')[0];
     }
 
     function getWeekNumber(date) {
-      const start = new Date(2026, 0, 5);
+      const start = new Date(2026, 0, 6); // Jan 6, 2026 - Monday
       const diff = Math.floor((date - start) / (7 * 24 * 60 * 60 * 1000));
       return Math.max(1, Math.min(12, diff + 1));
     }
@@ -591,18 +608,33 @@
       return date.toLocaleString('en', { month: 'short' });
     }
 
+    // NEW SCHEDULE: Upper A → Run → Lower A → Run → Upper B + Run → Lower B → Rest
     function getScheduledSession(date) {
       const day = date.getDay();
       const sessions = {
-        0: 'Boxing / Run',
-        1: 'Upper A (Gym)',
-        2: 'Lower A (Gym)',
-        3: 'Boxing',
-        4: 'Upper B (Gym)',
-        5: 'REST',
-        6: 'Lower B + Run'
+        0: 'REST',           // Sunday
+        1: 'Upper A',        // Monday
+        2: 'Running',        // Tuesday
+        3: 'Lower A',        // Wednesday
+        4: 'Running',        // Thursday
+        5: 'Upper B + Run',  // Friday
+        6: 'Lower B'         // Saturday
       };
       return sessions[day];
+    }
+
+    function isRunningDay(date) {
+      const day = date.getDay();
+      // Tuesday (2), Thursday (4), Friday (5 - Upper B + Run)
+      return day === 2 || day === 4 || day === 5;
+    }
+
+    function calculatePace(distance, time) {
+      if (!distance || !time || distance <= 0) return '— min/km';
+      const pace = time / distance;
+      const mins = Math.floor(pace);
+      const secs = Math.round((pace - mins) * 60);
+      return `${mins}:${secs.toString().padStart(2, '0')} min/km`;
     }
 
     function showToast(message, type = 'success') {
@@ -634,20 +666,29 @@
       banner.classList.toggle('show', !isOnline);
     }
 
-    // Firebase Data Operations
-    function saveToFirebase(path, data) {
+    // =====================================================
+    // FIREBASE OPERATIONS - WITH FIX FOR RACE CONDITION
+    // =====================================================
+    function saveToFirebase(path, data, key) {
       if (!db) return Promise.reject('No database');
       
       updateSyncIndicator('syncing');
       
+      // Mark that we should ignore the next update for this key
+      ignoreNextUpdate[key] = true;
+      
       return db.ref(path).set(data)
         .then(() => {
           updateSyncIndicator('synced');
+          // Clear the ignore flag after a short delay
+          setTimeout(() => {
+            ignoreNextUpdate[key] = false;
+          }, 1000);
         })
         .catch(err => {
           console.error('Save error:', err);
           updateSyncIndicator('error');
-          // Also save locally as backup
+          ignoreNextUpdate[key] = false;
           saveToLocal();
         });
     }
@@ -697,71 +738,91 @@
           state.lifts = data.lifts || {};
           state.weekly = data.weekly || {};
           state.measurements = data.measurements || {};
-          
-          // Backup locally
           saveToLocal();
           dataLoaded = true;
         })
         .catch(err => {
           console.error('Load error:', err);
           loadFromLocal();
+          dataLoaded = true;
         });
     }
 
-    // Listen for real-time updates
     function setupRealtimeListeners() {
       if (!db) return;
 
       db.ref('entries').on('value', snapshot => {
-        if (dataLoaded) {
-          state.entries = snapshot.val() || {};
-          renderCurrentTab();
+        if (!dataLoaded) return;
+        const key = 'entries';
+        if (ignoreNextUpdate[key]) return;
+        
+        state.entries = snapshot.val() || {};
+        if (state.activeTab === 'daily') {
+          renderDailyTab();
         }
       });
 
       db.ref('lifts').on('value', snapshot => {
-        if (dataLoaded) {
-          state.lifts = snapshot.val() || {};
-          renderCurrentTab();
+        if (!dataLoaded) return;
+        const key = 'lifts';
+        if (ignoreNextUpdate[key]) return;
+        
+        state.lifts = snapshot.val() || {};
+        if (state.activeTab === 'lifts') {
+          renderLiftsTab();
         }
       });
 
       db.ref('weekly').on('value', snapshot => {
-        if (dataLoaded) {
-          state.weekly = snapshot.val() || {};
-          renderCurrentTab();
+        if (!dataLoaded) return;
+        const key = 'weekly';
+        if (ignoreNextUpdate[key]) return;
+        
+        state.weekly = snapshot.val() || {};
+        if (state.activeTab === 'weekly') {
+          renderWeeklyTab();
         }
       });
 
       db.ref('measurements').on('value', snapshot => {
-        if (dataLoaded) {
-          state.measurements = snapshot.val() || {};
-          renderCurrentTab();
+        if (!dataLoaded) return;
+        const key = 'measurements';
+        if (ignoreNextUpdate[key]) return;
+        
+        state.measurements = snapshot.val() || {};
+        if (state.activeTab === 'body') {
+          renderBodyTab();
         }
       });
     }
 
-    // Data Accessors
+    // =====================================================
+    // DATA ACCESSORS - WITH DEBOUNCED SAVE
+    // =====================================================
     function getCurrentEntry() {
       const key = formatDate(state.currentDate);
       return state.entries[key] || {};
     }
 
     function updateCurrentEntry(field, value) {
-      const key = formatDate(state.currentDate);
-      if (!state.entries[key]) state.entries[key] = { date: key };
+      const dateKey = formatDate(state.currentDate);
+      if (!state.entries[dateKey]) state.entries[dateKey] = { date: dateKey };
       
       if (value === '' || value === null || value === undefined) {
-        delete state.entries[key][field];
+        delete state.entries[dateKey][field];
       } else {
-        state.entries[key][field] = value;
+        state.entries[dateKey][field] = value;
       }
       
-      clearTimeout(state.saveTimeout);
-      state.saveTimeout = setTimeout(() => {
-        saveToFirebase('entries/' + key, state.entries[key]);
+      // Debounced save
+      if (saveTimeouts['entry_' + dateKey]) {
+        clearTimeout(saveTimeouts['entry_' + dateKey]);
+      }
+      
+      saveTimeouts['entry_' + dateKey] = setTimeout(() => {
+        saveToFirebase('entries/' + dateKey, state.entries[dateKey], 'entries');
         saveToLocal();
-      }, 500);
+      }, 800);
     }
 
     function getCurrentLifts() {
@@ -779,11 +840,14 @@
         state.lifts[week][field] = value;
       }
       
-      clearTimeout(state.saveTimeout);
-      state.saveTimeout = setTimeout(() => {
-        saveToFirebase('lifts/' + week, state.lifts[week]);
+      if (saveTimeouts['lifts_' + week]) {
+        clearTimeout(saveTimeouts['lifts_' + week]);
+      }
+      
+      saveTimeouts['lifts_' + week] = setTimeout(() => {
+        saveToFirebase('lifts/' + week, state.lifts[week], 'lifts');
         saveToLocal();
-      }, 500);
+      }, 800);
     }
 
     function getCurrentWeekly() {
@@ -801,11 +865,14 @@
         state.weekly[week][field] = value;
       }
       
-      clearTimeout(state.saveTimeout);
-      state.saveTimeout = setTimeout(() => {
-        saveToFirebase('weekly/' + week, state.weekly[week]);
+      if (saveTimeouts['weekly_' + week]) {
+        clearTimeout(saveTimeouts['weekly_' + week]);
+      }
+      
+      saveTimeouts['weekly_' + week] = setTimeout(() => {
+        saveToFirebase('weekly/' + week, state.weekly[week], 'weekly');
         saveToLocal();
-      }, 500);
+      }, 800);
     }
 
     function getCurrentMeasurements() {
@@ -823,14 +890,19 @@
         state.measurements[month][field] = value;
       }
       
-      clearTimeout(state.saveTimeout);
-      state.saveTimeout = setTimeout(() => {
-        saveToFirebase('measurements/' + month, state.measurements[month]);
+      if (saveTimeouts['measurements_' + month]) {
+        clearTimeout(saveTimeouts['measurements_' + month]);
+      }
+      
+      saveTimeouts['measurements_' + month] = setTimeout(() => {
+        saveToFirebase('measurements/' + month, state.measurements[month], 'measurements');
         saveToLocal();
-      }, 500);
+      }, 800);
     }
 
-    // UI Rendering
+    // =====================================================
+    // UI RENDERING - FIXED TO NOT CLEAR FOCUSED INPUT
+    // =====================================================
     function renderDateNav() {
       const date = state.currentDate;
       const dayName = getDayName(date);
@@ -844,6 +916,13 @@
       document.getElementById('liftsWeek').textContent = week;
       document.getElementById('weeklyWeek').textContent = week;
       document.getElementById('bodyMonth').textContent = getMonthName(date);
+    }
+
+    function updateInputIfNotFocused(id, value) {
+      const input = document.getElementById(id);
+      if (input && document.activeElement !== input) {
+        input.value = value || '';
+      }
     }
 
     function renderRatingButtons(containerId, currentValue, onSelect, isBlue = false) {
@@ -878,11 +957,26 @@
     function renderDailyTab() {
       const entry = getCurrentEntry();
       
-      document.getElementById('weight').value = entry.weight || '';
-      document.getElementById('protein').value = entry.protein || '';
-      document.getElementById('water').value = entry.water || '';
-      document.getElementById('sleep').value = entry.sleep || '';
-      document.getElementById('notes').value = entry.notes || '';
+      // Only update inputs that aren't focused
+      updateInputIfNotFocused('weight', entry.weight);
+      updateInputIfNotFocused('protein', entry.protein);
+      updateInputIfNotFocused('water', entry.water);
+      updateInputIfNotFocused('sleep', entry.sleep);
+      updateInputIfNotFocused('notes', entry.notes);
+
+      // Running card - show on running days
+      const runningCard = document.getElementById('runningCard');
+      if (isRunningDay(state.currentDate)) {
+        runningCard.style.display = 'block';
+        updateInputIfNotFocused('runDistance', entry.runDistance);
+        updateInputIfNotFocused('runTime', entry.runTime);
+        
+        // Update pace
+        const pace = calculatePace(entry.runDistance, entry.runTime);
+        document.getElementById('runPace').textContent = pace;
+      } else {
+        runningCard.style.display = 'none';
+      }
 
       const yesBtn = document.getElementById('sessionYes');
       const noBtn = document.getElementById('sessionNo');
@@ -891,42 +985,40 @@
 
       renderRatingButtons('nutritionRating', entry.nutrition, (val) => {
         updateCurrentEntry('nutrition', val);
-        renderDailyTab();
       });
       
       renderRatingButtons('energyRating', entry.energy, (val) => {
         updateCurrentEntry('energy', val);
-        renderDailyTab();
       }, true);
     }
 
     function renderLiftsTab() {
       const lifts = getCurrentLifts();
-      document.getElementById('lift-ohp').value = lifts.ohp || '';
-      document.getElementById('lift-incline').value = lifts.incline || '';
-      document.getElementById('lift-pullups').value = lifts.pullups || '';
-      document.getElementById('lift-row').value = lifts.row || '';
-      document.getElementById('lift-squat').value = lifts.squat || '';
-      document.getElementById('lift-rdl').value = lifts.rdl || '';
+      updateInputIfNotFocused('lift-incline', lifts.incline);
+      updateInputIfNotFocused('lift-ohp', lifts.ohp);
+      updateInputIfNotFocused('lift-pullups', lifts.pullups);
+      updateInputIfNotFocused('lift-row', lifts.row);
+      updateInputIfNotFocused('lift-squat', lifts.squat);
+      updateInputIfNotFocused('lift-rdl', lifts.rdl);
     }
 
     function renderWeeklyTab() {
       const weekly = getCurrentWeekly();
-      document.getElementById('weekStartWeight').value = weekly.startWeight || '';
-      document.getElementById('weekEndWeight').value = weekly.endWeight || '';
-      document.getElementById('weekAvgSleep').value = weekly.avgSleep || '';
-      document.getElementById('weekNotes').value = weekly.notes || '';
+      updateInputIfNotFocused('weekStartWeight', weekly.startWeight);
+      updateInputIfNotFocused('weekEndWeight', weekly.endWeight);
+      updateInputIfNotFocused('weekAvgSleep', weekly.avgSleep);
+      updateInputIfNotFocused('weekNotes', weekly.notes);
       renderSessionsButtons(weekly.sessionsCompleted);
     }
 
     function renderBodyTab() {
       const meas = getCurrentMeasurements();
-      document.getElementById('bodyWeight').value = meas.weight || '';
-      document.getElementById('bodyWaist').value = meas.waist || '';
-      document.getElementById('bodyShoulders').value = meas.shoulders || '';
-      document.getElementById('bodyChest').value = meas.chest || '';
-      document.getElementById('bodyArmL').value = meas.armL || '';
-      document.getElementById('bodyArmR').value = meas.armR || '';
+      updateInputIfNotFocused('bodyWeight', meas.weight);
+      updateInputIfNotFocused('bodyWaist', meas.waist);
+      updateInputIfNotFocused('bodyShoulders', meas.shoulders);
+      updateInputIfNotFocused('bodyChest', meas.chest);
+      updateInputIfNotFocused('bodyArmL', meas.armL);
+      updateInputIfNotFocused('bodyArmR', meas.armR);
     }
 
     function renderCurrentTab() {
@@ -951,10 +1043,13 @@
       renderCurrentTab();
     }
 
-    // Report Generation
+    // =====================================================
+    // REPORT GENERATION
+    // =====================================================
     function generateReport() {
       const week = getWeekNumber(state.currentDate);
       const weekEntries = Object.values(state.entries).filter(e => {
+        if (!e || !e.date) return false;
         const entryDate = new Date(e.date);
         return getWeekNumber(entryDate) === week;
       }).sort((a, b) => a.date.localeCompare(b.date));
@@ -998,6 +1093,7 @@
       <th>Sleep</th>
       <th>Nutr</th>
       <th>Energy</th>
+      <th>Run</th>
     </tr>
     ${weekEntries.map(e => `
     <tr>
@@ -1009,22 +1105,23 @@
       <td>${e.sleep || '—'}h</td>
       <td>${e.nutrition || '—'}/10</td>
       <td>${e.energy || '—'}/10</td>
+      <td>${e.runTime ? (e.runDistance ? e.runDistance + 'km / ' : '') + e.runTime + 'min' : '—'}</td>
     </tr>`).join('')}
   </table>
 
   <h2>🏋️ Key Lifts</h2>
   <table>
     <tr>
-      <th>OHP</th>
-      <th>Incline DB</th>
+      <th>Incline Bench</th>
+      <th>Shoulder Press</th>
       <th>Pull-ups</th>
       <th>BB Row</th>
       <th>Squat</th>
       <th>RDL</th>
     </tr>
     <tr>
-      <td>${lifts.ohp || '—'}</td>
       <td>${lifts.incline || '—'}</td>
+      <td>${lifts.ohp || '—'}</td>
       <td>${lifts.pullups || '—'}</td>
       <td>${lifts.row || '—'}</td>
       <td>${lifts.squat || '—'}</td>
@@ -1063,16 +1160,18 @@
       showToast('Report downloaded!', 'success');
     }
 
-    // Event Listeners
+    // =====================================================
+    // EVENT LISTENERS
+    // =====================================================
     function setupEventListeners() {
       document.getElementById('prevDay').onclick = () => {
-        state.currentDate.setDate(state.currentDate.getDate() - 1);
+        state.currentDate = new Date(state.currentDate.getTime() - 24 * 60 * 60 * 1000);
         renderDateNav();
         renderCurrentTab();
       };
 
       document.getElementById('nextDay').onclick = () => {
-        state.currentDate.setDate(state.currentDate.getDate() + 1);
+        state.currentDate = new Date(state.currentDate.getTime() + 24 * 60 * 60 * 1000);
         renderDateNav();
         renderCurrentTab();
       };
@@ -1081,12 +1180,21 @@
         tab.onclick = () => switchTab(tab.dataset.tab);
       });
 
-      // Daily inputs
-      document.getElementById('weight').oninput = (e) => updateCurrentEntry('weight', e.target.value ? parseFloat(e.target.value) : null);
-      document.getElementById('protein').oninput = (e) => updateCurrentEntry('protein', e.target.value ? parseInt(e.target.value) : null);
-      document.getElementById('water').oninput = (e) => updateCurrentEntry('water', e.target.value ? parseFloat(e.target.value) : null);
-      document.getElementById('sleep').oninput = (e) => updateCurrentEntry('sleep', e.target.value ? parseFloat(e.target.value) : null);
-      document.getElementById('notes').oninput = (e) => updateCurrentEntry('notes', e.target.value || null);
+      // Daily inputs - using onchange for more reliable saves
+      const weightInput = document.getElementById('weight');
+      weightInput.oninput = (e) => updateCurrentEntry('weight', e.target.value ? parseFloat(e.target.value) : null);
+      
+      const proteinInput = document.getElementById('protein');
+      proteinInput.oninput = (e) => updateCurrentEntry('protein', e.target.value ? parseInt(e.target.value) : null);
+      
+      const waterInput = document.getElementById('water');
+      waterInput.oninput = (e) => updateCurrentEntry('water', e.target.value ? parseFloat(e.target.value) : null);
+      
+      const sleepInput = document.getElementById('sleep');
+      sleepInput.oninput = (e) => updateCurrentEntry('sleep', e.target.value ? parseFloat(e.target.value) : null);
+      
+      const notesInput = document.getElementById('notes');
+      notesInput.oninput = (e) => updateCurrentEntry('notes', e.target.value || null);
 
       document.getElementById('sessionYes').onclick = () => {
         updateCurrentEntry('sessionCompleted', true);
@@ -1097,9 +1205,28 @@
         renderDailyTab();
       };
 
+      // Running inputs
+      document.getElementById('runDistance').oninput = (e) => {
+        const val = e.target.value ? parseFloat(e.target.value) : null;
+        updateCurrentEntry('runDistance', val);
+        // Update pace display
+        const entry = getCurrentEntry();
+        const pace = calculatePace(val, entry.runTime);
+        document.getElementById('runPace').textContent = pace;
+      };
+      
+      document.getElementById('runTime').oninput = (e) => {
+        const val = e.target.value ? parseInt(e.target.value) : null;
+        updateCurrentEntry('runTime', val);
+        // Update pace display
+        const entry = getCurrentEntry();
+        const pace = calculatePace(entry.runDistance, val);
+        document.getElementById('runPace').textContent = pace;
+      };
+
       // Lifts inputs
-      document.getElementById('lift-ohp').oninput = (e) => updateCurrentLifts('ohp', e.target.value || null);
       document.getElementById('lift-incline').oninput = (e) => updateCurrentLifts('incline', e.target.value || null);
+      document.getElementById('lift-ohp').oninput = (e) => updateCurrentLifts('ohp', e.target.value || null);
       document.getElementById('lift-pullups').oninput = (e) => updateCurrentLifts('pullups', e.target.value || null);
       document.getElementById('lift-row').oninput = (e) => updateCurrentLifts('row', e.target.value || null);
       document.getElementById('lift-squat').oninput = (e) => updateCurrentLifts('squat', e.target.value || null);
@@ -1121,7 +1248,6 @@
 
       document.getElementById('downloadReport').onclick = generateReport;
 
-      // Online/offline detection
       window.addEventListener('online', () => {
         isOnline = true;
         updateSyncIndicator('synced');
@@ -1135,7 +1261,9 @@
       });
     }
 
-    // Initialize
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
     async function init() {
       try {
         await loadAllData();
