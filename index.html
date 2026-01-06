@@ -9,20 +9,16 @@
   <meta name="theme-color" content="#0f172a">
   <title>RETRIEVE — Training Tracker</title>
   
-  <!-- PWA Manifest -->
   <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlJFVFJJRVZFIFRyYWluaW5nIFRyYWNrZXIiLAogICJzaG9ydF9uYW1lIjogIlJldHJpZXZlIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwZjE3MmEiLAogICJ0aGVtZV9jb2xvciI6ICIjMGYxNzJhIiwKICAib3JpZW50YXRpb24iOiAicG9ydHJhaXQiCn0=">
   
-  <!-- App Icon (SVG as data URI) -->
   <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzBmMTcyYSIvPjx0ZXh0IHg9IjkwIiB5PSIxMDUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI3MCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMxMGI5ODEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlI8L3RleHQ+PC9zdmc+">
   
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     :root {
       --bg-primary: #0f172a;
       --bg-secondary: #1e293b;
@@ -37,7 +33,6 @@
       --accent-yellow: #f59e0b;
       --border: #334155;
     }
-    
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--bg-primary);
@@ -46,12 +41,8 @@
       min-height: -webkit-fill-available;
       overflow-x: hidden;
     }
+    html { height: -webkit-fill-available; }
     
-    html {
-      height: -webkit-fill-available;
-    }
-    
-    /* Header */
     .header {
       background: var(--bg-secondary);
       padding: 16px 20px;
@@ -60,7 +51,6 @@
       z-index: 100;
       border-bottom: 1px solid var(--border);
     }
-    
     .header-content {
       max-width: 500px;
       margin: 0 auto;
@@ -68,44 +58,42 @@
       justify-content: space-between;
       align-items: center;
     }
-    
     .logo {
       font-size: 22px;
       font-weight: 800;
       letter-spacing: -0.5px;
       color: var(--accent-green);
     }
-    
-    .save-indicator {
+    .sync-indicator {
       font-size: 12px;
       color: var(--text-muted);
       display: flex;
       align-items: center;
       gap: 6px;
     }
-    
-    .save-indicator.saving {
-      color: var(--accent-yellow);
-    }
-    
-    .save-indicator.saved {
-      color: var(--accent-green);
-    }
-    
+    .sync-indicator.syncing { color: var(--accent-yellow); }
+    .sync-indicator.synced { color: var(--accent-green); }
+    .sync-indicator.offline { color: var(--accent-red); }
+    .sync-indicator.error { color: var(--accent-red); }
     .dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       background: currentColor;
     }
+    .dot.pulse {
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
     
-    /* Date Navigator */
     .date-nav {
       background: var(--bg-secondary);
       padding: 16px 20px;
       border-bottom: 1px solid var(--border);
     }
-    
     .date-nav-content {
       max-width: 500px;
       margin: 0 auto;
@@ -113,7 +101,6 @@
       align-items: center;
       justify-content: space-between;
     }
-    
     .nav-btn {
       background: var(--bg-tertiary);
       border: none;
@@ -128,26 +115,10 @@
       justify-content: center;
       transition: background 0.2s;
     }
-    
-    .nav-btn:active {
-      background: var(--border);
-    }
-    
-    .date-info {
-      text-align: center;
-    }
-    
-    .date-main {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-    
-    .date-sub {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-    
+    .nav-btn:active { background: var(--border); }
+    .date-info { text-align: center; }
+    .date-main { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .date-sub { font-size: 13px; color: var(--text-secondary); }
     .session-badge {
       display: inline-block;
       background: var(--bg-tertiary);
@@ -159,7 +130,6 @@
       font-weight: 500;
     }
     
-    /* Tabs */
     .tabs {
       display: flex;
       max-width: 500px;
@@ -170,7 +140,6 @@
       top: 65px;
       z-index: 99;
     }
-    
     .tab {
       flex: 1;
       padding: 14px 8px;
@@ -186,11 +155,7 @@
       position: relative;
       transition: color 0.2s;
     }
-    
-    .tab.active {
-      color: var(--accent-green);
-    }
-    
+    .tab.active { color: var(--accent-green); }
     .tab.active::after {
       content: '';
       position: absolute;
@@ -202,21 +167,18 @@
       border-radius: 3px 3px 0 0;
     }
     
-    /* Content */
     .content {
       max-width: 500px;
       margin: 0 auto;
       padding: 16px;
       padding-bottom: 100px;
     }
-    
     .card {
       background: var(--bg-secondary);
       border-radius: 16px;
       padding: 16px;
       margin-bottom: 12px;
     }
-    
     .card-label {
       font-size: 12px;
       color: var(--text-secondary);
@@ -225,7 +187,6 @@
       letter-spacing: 0.5px;
       font-weight: 500;
     }
-    
     .input {
       width: 100%;
       background: var(--bg-tertiary);
@@ -237,15 +198,8 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    
-    .input:focus {
-      border-color: var(--accent-green);
-    }
-    
-    .input::placeholder {
-      color: var(--text-muted);
-    }
-    
+    .input:focus { border-color: var(--accent-green); }
+    .input::placeholder { color: var(--text-muted); }
     textarea.input {
       resize: none;
       min-height: 100px;
@@ -253,12 +207,7 @@
       line-height: 1.5;
     }
     
-    /* Toggle Buttons */
-    .toggle-group {
-      display: flex;
-      gap: 10px;
-    }
-    
+    .toggle-group { display: flex; gap: 10px; }
     .toggle-btn {
       flex: 1;
       padding: 16px;
@@ -271,23 +220,10 @@
       cursor: pointer;
       transition: all 0.2s;
     }
+    .toggle-btn.active-yes { background: var(--accent-green); border-color: var(--accent-green); }
+    .toggle-btn.active-no { background: var(--accent-red); border-color: var(--accent-red); }
     
-    .toggle-btn.active-yes {
-      background: var(--accent-green);
-      border-color: var(--accent-green);
-    }
-    
-    .toggle-btn.active-no {
-      background: var(--accent-red);
-      border-color: var(--accent-red);
-    }
-    
-    /* Rating Buttons */
-    .rating-group {
-      display: flex;
-      gap: 4px;
-    }
-    
+    .rating-group { display: flex; gap: 4px; }
     .rating-btn {
       flex: 1;
       padding: 12px 4px;
@@ -300,23 +236,10 @@
       cursor: pointer;
       transition: all 0.2s;
     }
+    .rating-btn.active { background: var(--accent-green); color: white; }
+    .rating-btn.active-blue { background: var(--accent-blue); color: white; }
     
-    .rating-btn.active {
-      background: var(--accent-green);
-      color: white;
-    }
-    
-    .rating-btn.active-blue {
-      background: var(--accent-blue);
-      color: white;
-    }
-    
-    /* Sessions Counter */
-    .sessions-group {
-      display: flex;
-      gap: 6px;
-    }
-    
+    .sessions-group { display: flex; gap: 6px; }
     .session-btn {
       flex: 1;
       padding: 14px 8px;
@@ -329,20 +252,10 @@
       cursor: pointer;
       transition: all 0.2s;
     }
+    .session-btn.active { background: var(--accent-green); color: white; }
     
-    .session-btn.active {
-      background: var(--accent-green);
-      color: white;
-    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     
-    /* Grid */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    
-    /* Primary Button */
     .btn-primary {
       width: 100%;
       padding: 18px;
@@ -360,17 +273,9 @@
       transition: background 0.2s;
       margin-top: 20px;
     }
+    .btn-primary:active { background: #2563eb; }
+    .btn-primary:disabled { background: var(--bg-tertiary); color: var(--text-muted); }
     
-    .btn-primary:active {
-      background: #2563eb;
-    }
-    
-    .btn-primary:disabled {
-      background: var(--bg-tertiary);
-      color: var(--text-muted);
-    }
-    
-    /* Section Title */
     .section-title {
       font-size: 13px;
       color: var(--text-muted);
@@ -378,7 +283,6 @@
       padding-left: 4px;
     }
     
-    /* Footer */
     .footer {
       position: fixed;
       bottom: 0;
@@ -389,24 +293,14 @@
       padding: 12px 20px;
       padding-bottom: max(12px, env(safe-area-inset-bottom));
     }
-    
     .footer-content {
       max-width: 500px;
       margin: 0 auto;
       text-align: center;
     }
+    .target-text { font-size: 11px; color: var(--text-muted); }
+    .target-highlight { color: var(--accent-green); font-weight: 600; }
     
-    .target-text {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-    
-    .target-highlight {
-      color: var(--accent-green);
-      font-weight: 600;
-    }
-    
-    /* Toast Notification */
     .toast {
       position: fixed;
       bottom: 80px;
@@ -423,21 +317,10 @@
       z-index: 200;
       box-shadow: 0 10px 40px rgba(0,0,0,0.4);
     }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast.success { background: var(--accent-green); }
+    .toast.error { background: var(--accent-red); }
     
-    .toast.show {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
-    
-    .toast.success {
-      background: var(--accent-green);
-    }
-    
-    .toast.error {
-      background: var(--accent-red);
-    }
-    
-    /* Loading Screen */
     .loading-screen {
       position: fixed;
       inset: 0;
@@ -448,14 +331,7 @@
       justify-content: center;
       z-index: 1000;
     }
-    
-    .loading-logo {
-      font-size: 48px;
-      font-weight: 800;
-      color: var(--accent-green);
-      margin-bottom: 20px;
-    }
-    
+    .loading-logo { font-size: 48px; font-weight: 800; color: var(--accent-green); margin-bottom: 20px; }
     .loading-spinner {
       width: 40px;
       height: 40px;
@@ -464,54 +340,44 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
+    .loading-text { margin-top: 20px; color: var(--text-muted); font-size: 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    .app-content { display: none; }
+    .app-content.loaded { display: block; }
     
-    /* Hide content until loaded */
-    .app-content {
+    .connection-banner {
+      background: var(--accent-yellow);
+      color: #000;
+      text-align: center;
+      padding: 8px;
+      font-size: 12px;
+      font-weight: 600;
       display: none;
     }
-    
-    .app-content.loaded {
-      display: block;
-    }
-    
-    /* Empty state */
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-muted);
-    }
-    
-    .empty-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
+    .connection-banner.show { display: block; }
   </style>
 </head>
 <body>
-  <!-- Loading Screen -->
   <div class="loading-screen" id="loadingScreen">
     <div class="loading-logo">R</div>
     <div class="loading-spinner"></div>
+    <div class="loading-text" id="loadingText">Connecting...</div>
   </div>
 
-  <!-- App Content -->
   <div class="app-content" id="appContent">
-    <!-- Header -->
+    <div class="connection-banner" id="connectionBanner">Offline — changes will sync when connected</div>
+    
     <header class="header">
       <div class="header-content">
         <div class="logo">RETRIEVE</div>
-        <div class="save-indicator" id="saveIndicator">
-          <span class="dot"></span>
-          <span id="saveText">Saved</span>
+        <div class="sync-indicator" id="syncIndicator">
+          <span class="dot" id="syncDot"></span>
+          <span id="syncText">Synced</span>
         </div>
       </div>
     </header>
 
-    <!-- Date Navigator -->
     <div class="date-nav">
       <div class="date-nav-content">
         <button class="nav-btn" id="prevDay">←</button>
@@ -524,7 +390,6 @@
       </div>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
       <button class="tab active" data-tab="daily">Daily</button>
       <button class="tab" data-tab="lifts">Lifts</button>
@@ -532,15 +397,12 @@
       <button class="tab" data-tab="body">Body</button>
     </div>
 
-    <!-- Content -->
     <div class="content">
-      <!-- Daily Tab -->
       <div id="daily-tab" class="tab-content">
         <div class="card">
           <div class="card-label">Weight (kg)</div>
           <input type="number" step="0.1" class="input" id="weight" placeholder="77.3" inputmode="decimal">
         </div>
-
         <div class="card">
           <div class="card-label">Session Completed?</div>
           <div class="toggle-group">
@@ -548,82 +410,66 @@
             <button class="toggle-btn" id="sessionNo">✗ No</button>
           </div>
         </div>
-
         <div class="card">
           <div class="card-label">Protein (g)</div>
           <input type="number" class="input" id="protein" placeholder="145" inputmode="numeric">
         </div>
-
         <div class="card">
           <div class="card-label">Water (L)</div>
           <input type="number" step="0.5" class="input" id="water" placeholder="3.0" inputmode="decimal">
         </div>
-
         <div class="card">
           <div class="card-label">Sleep (hours)</div>
           <input type="number" step="0.5" class="input" id="sleep" placeholder="7.0" inputmode="decimal">
         </div>
-
         <div class="card">
           <div class="card-label">Nutrition (1-10)</div>
           <div class="rating-group" id="nutritionRating"></div>
         </div>
-
         <div class="card">
           <div class="card-label">Energy (1-10)</div>
           <div class="rating-group" id="energyRating"></div>
         </div>
-
         <div class="card">
           <div class="card-label">Notes</div>
           <textarea class="input" id="notes" placeholder="Any observations, issues, wins..."></textarea>
         </div>
       </div>
 
-      <!-- Lifts Tab -->
       <div id="lifts-tab" class="tab-content" style="display:none;">
         <div class="section-title">Week <span id="liftsWeek">1</span> — Best sets (kg × reps)</div>
-        
         <div class="card">
           <div class="card-label">Overhead Press</div>
           <input type="text" class="input" id="lift-ohp" placeholder="40kg × 8">
         </div>
-
         <div class="card">
           <div class="card-label">Incline DB Press</div>
           <input type="text" class="input" id="lift-incline" placeholder="20kg × 10">
         </div>
-
         <div class="card">
           <div class="card-label">Pull-ups</div>
           <input type="text" class="input" id="lift-pullups" placeholder="BW × 10">
         </div>
-
         <div class="card">
           <div class="card-label">Barbell Row</div>
           <input type="text" class="input" id="lift-row" placeholder="65kg × 8">
         </div>
-
         <div class="card">
           <div class="card-label">Squat</div>
           <input type="text" class="input" id="lift-squat" placeholder="80kg × 6">
         </div>
-
         <div class="card">
           <div class="card-label">Romanian Deadlift</div>
           <input type="text" class="input" id="lift-rdl" placeholder="70kg × 10">
         </div>
       </div>
 
-      <!-- Weekly Tab -->
       <div id="weekly-tab" class="tab-content" style="display:none;">
         <div class="section-title">Week <span id="weeklyWeek">1</span> Summary</div>
-
         <div class="card">
           <div class="card-label">Sessions Completed</div>
           <div class="sessions-group" id="sessionsGroup"></div>
         </div>
-
         <div class="grid-2">
           <div class="card">
             <div class="card-label">Start Weight (kg)</div>
@@ -634,46 +480,35 @@
             <input type="number" step="0.1" class="input" id="weekEndWeight" placeholder="76.8" inputmode="decimal">
           </div>
         </div>
-
         <div class="card">
           <div class="card-label">Average Sleep (hours)</div>
           <input type="number" step="0.5" class="input" id="weekAvgSleep" placeholder="6.5" inputmode="decimal">
         </div>
-
         <div class="card">
           <div class="card-label">Weekly Notes</div>
           <textarea class="input" id="weekNotes" placeholder="How did the week go? Issues? Adjustments needed?"></textarea>
         </div>
-
-        <button class="btn-primary" id="downloadReport">
-          📄 Download Week Report
-        </button>
+        <button class="btn-primary" id="downloadReport">📄 Download Week Report</button>
       </div>
 
-      <!-- Body Tab -->
       <div id="body-tab" class="tab-content" style="display:none;">
         <div class="section-title">Monthly Measurements — <span id="bodyMonth">Jan</span></div>
-
         <div class="card">
           <div class="card-label">Weight (kg)</div>
           <input type="number" step="0.1" class="input" id="bodyWeight" placeholder="77.3" inputmode="decimal">
         </div>
-
         <div class="card">
           <div class="card-label">Waist (cm)</div>
           <input type="number" step="0.5" class="input" id="bodyWaist" placeholder="85" inputmode="decimal">
         </div>
-
         <div class="card">
           <div class="card-label">Shoulders (cm)</div>
           <input type="number" step="0.5" class="input" id="bodyShoulders" placeholder="115" inputmode="decimal">
         </div>
-
         <div class="card">
           <div class="card-label">Chest (cm)</div>
           <input type="number" step="0.5" class="input" id="bodyChest" placeholder="100" inputmode="decimal">
         </div>
-
         <div class="grid-2">
           <div class="card">
             <div class="card-label">Left Arm (cm)</div>
@@ -687,29 +522,46 @@
       </div>
     </div>
 
-    <!-- Footer -->
     <footer class="footer">
       <div class="footer-content">
-        <div class="target-text">
-          Target: <span class="target-highlight">71-73kg @ 12-14% BF</span> by March 30
-        </div>
+        <div class="target-text">Target: <span class="target-highlight">71-73kg @ 12-14% BF</span> by March 30</div>
       </div>
     </footer>
   </div>
 
-  <!-- Toast -->
   <div class="toast" id="toast"></div>
 
   <script>
-    // ==================== APP STATE ====================
-    const APP_VERSION = '1.0.0';
-    const STORAGE_KEYS = {
-      entries: 'retrieve_entries_v1',
-      lifts: 'retrieve_lifts_v1',
-      weekly: 'retrieve_weekly_v1',
-      measurements: 'retrieve_measurements_v1'
+    // =====================================================
+    // FIREBASE CONFIG — REPLACE WITH YOUR OWN
+    // =====================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyC5KsRYObEKpaSIwuyK4G7651_xeog5g6A",
+      authDomain: "retrieve-57235.firebaseapp.com",
+      databaseURL: "https://retrieve-57235-default-rtdb.firebaseio.com",
+      projectId: "retrieve-57235",
+      storageBucket: "retrieve-57235.firebasestorage.app",
+      messagingSenderId: "47560739436",
+      appId: "1:47560739436:web:6fc18d272139327834a649"
     };
+    // =====================================================
 
+    // Initialize Firebase
+    let db;
+    let isOnline = navigator.onLine;
+    let dataLoaded = false;
+
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      
+      // Enable offline persistence
+      db.goOnline();
+    } catch (e) {
+      console.error('Firebase init error:', e);
+    }
+
+    // State
     let state = {
       currentDate: new Date(),
       entries: {},
@@ -720,7 +572,7 @@
       saveTimeout: null
     };
 
-    // ==================== UTILITIES ====================
+    // Utilities
     function formatDate(date) {
       return date.toISOString().split('T')[0];
     }
@@ -760,50 +612,136 @@
       setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
-    function updateSaveIndicator(status) {
-      const indicator = document.getElementById('saveIndicator');
-      const text = document.getElementById('saveText');
-      indicator.className = 'save-indicator ' + status;
-      text.textContent = status === 'saving' ? 'Saving...' : 'Saved';
+    function updateSyncIndicator(status) {
+      const indicator = document.getElementById('syncIndicator');
+      const dot = document.getElementById('syncDot');
+      const text = document.getElementById('syncText');
+      
+      indicator.className = 'sync-indicator ' + status;
+      dot.className = status === 'syncing' ? 'dot pulse' : 'dot';
+      
+      const statusText = {
+        syncing: 'Syncing...',
+        synced: 'Synced',
+        offline: 'Offline',
+        error: 'Error'
+      };
+      text.textContent = statusText[status] || 'Synced';
     }
 
-    // ==================== STORAGE ====================
-    function loadData() {
-      try {
-        const entries = localStorage.getItem(STORAGE_KEYS.entries);
-        const lifts = localStorage.getItem(STORAGE_KEYS.lifts);
-        const weekly = localStorage.getItem(STORAGE_KEYS.weekly);
-        const measurements = localStorage.getItem(STORAGE_KEYS.measurements);
+    function updateConnectionBanner() {
+      const banner = document.getElementById('connectionBanner');
+      banner.classList.toggle('show', !isOnline);
+    }
 
-        if (entries) state.entries = JSON.parse(entries);
-        if (lifts) state.lifts = JSON.parse(lifts);
-        if (weekly) state.weekly = JSON.parse(weekly);
-        if (measurements) state.measurements = JSON.parse(measurements);
+    // Firebase Data Operations
+    function saveToFirebase(path, data) {
+      if (!db) return Promise.reject('No database');
+      
+      updateSyncIndicator('syncing');
+      
+      return db.ref(path).set(data)
+        .then(() => {
+          updateSyncIndicator('synced');
+        })
+        .catch(err => {
+          console.error('Save error:', err);
+          updateSyncIndicator('error');
+          // Also save locally as backup
+          saveToLocal();
+        });
+    }
+
+    function saveToLocal() {
+      try {
+        localStorage.setItem('retrieve_backup', JSON.stringify({
+          entries: state.entries,
+          lifts: state.lifts,
+          weekly: state.weekly,
+          measurements: state.measurements
+        }));
       } catch (e) {
-        console.error('Load error:', e);
+        console.error('Local save error:', e);
       }
     }
 
-    function saveData() {
-      updateSaveIndicator('saving');
-      
-      if (state.saveTimeout) clearTimeout(state.saveTimeout);
-      
-      state.saveTimeout = setTimeout(() => {
-        try {
-          localStorage.setItem(STORAGE_KEYS.entries, JSON.stringify(state.entries));
-          localStorage.setItem(STORAGE_KEYS.lifts, JSON.stringify(state.lifts));
-          localStorage.setItem(STORAGE_KEYS.weekly, JSON.stringify(state.weekly));
-          localStorage.setItem(STORAGE_KEYS.measurements, JSON.stringify(state.measurements));
-          updateSaveIndicator('saved');
-        } catch (e) {
-          console.error('Save error:', e);
-          showToast('Save failed!', 'error');
+    function loadFromLocal() {
+      try {
+        const data = localStorage.getItem('retrieve_backup');
+        if (data) {
+          const parsed = JSON.parse(data);
+          state.entries = parsed.entries || {};
+          state.lifts = parsed.lifts || {};
+          state.weekly = parsed.weekly || {};
+          state.measurements = parsed.measurements || {};
+          return true;
         }
-      }, 500);
+      } catch (e) {
+        console.error('Local load error:', e);
+      }
+      return false;
     }
 
-    // ==================== DATA ACCESSORS ====================
+    function loadAllData() {
+      if (!db) {
+        loadFromLocal();
+        return Promise.resolve();
+      }
+
+      document.getElementById('loadingText').textContent = 'Loading data...';
+
+      return db.ref('/').once('value')
+        .then(snapshot => {
+          const data = snapshot.val() || {};
+          state.entries = data.entries || {};
+          state.lifts = data.lifts || {};
+          state.weekly = data.weekly || {};
+          state.measurements = data.measurements || {};
+          
+          // Backup locally
+          saveToLocal();
+          dataLoaded = true;
+        })
+        .catch(err => {
+          console.error('Load error:', err);
+          loadFromLocal();
+        });
+    }
+
+    // Listen for real-time updates
+    function setupRealtimeListeners() {
+      if (!db) return;
+
+      db.ref('entries').on('value', snapshot => {
+        if (dataLoaded) {
+          state.entries = snapshot.val() || {};
+          renderCurrentTab();
+        }
+      });
+
+      db.ref('lifts').on('value', snapshot => {
+        if (dataLoaded) {
+          state.lifts = snapshot.val() || {};
+          renderCurrentTab();
+        }
+      });
+
+      db.ref('weekly').on('value', snapshot => {
+        if (dataLoaded) {
+          state.weekly = snapshot.val() || {};
+          renderCurrentTab();
+        }
+      });
+
+      db.ref('measurements').on('value', snapshot => {
+        if (dataLoaded) {
+          state.measurements = snapshot.val() || {};
+          renderCurrentTab();
+        }
+      });
+    }
+
+    // Data Accessors
     function getCurrentEntry() {
       const key = formatDate(state.currentDate);
       return state.entries[key] || {};
@@ -812,8 +750,18 @@
     function updateCurrentEntry(field, value) {
       const key = formatDate(state.currentDate);
       if (!state.entries[key]) state.entries[key] = { date: key };
-      state.entries[key][field] = value;
-      saveData();
+      
+      if (value === '' || value === null || value === undefined) {
+        delete state.entries[key][field];
+      } else {
+        state.entries[key][field] = value;
+      }
+      
+      clearTimeout(state.saveTimeout);
+      state.saveTimeout = setTimeout(() => {
+        saveToFirebase('entries/' + key, state.entries[key]);
+        saveToLocal();
+      }, 500);
     }
 
     function getCurrentLifts() {
@@ -824,8 +772,18 @@
     function updateCurrentLifts(field, value) {
       const week = getWeekNumber(state.currentDate);
       if (!state.lifts[week]) state.lifts[week] = { week };
-      state.lifts[week][field] = value;
-      saveData();
+      
+      if (value === '' || value === null || value === undefined) {
+        delete state.lifts[week][field];
+      } else {
+        state.lifts[week][field] = value;
+      }
+      
+      clearTimeout(state.saveTimeout);
+      state.saveTimeout = setTimeout(() => {
+        saveToFirebase('lifts/' + week, state.lifts[week]);
+        saveToLocal();
+      }, 500);
     }
 
     function getCurrentWeekly() {
@@ -836,8 +794,18 @@
     function updateCurrentWeekly(field, value) {
       const week = getWeekNumber(state.currentDate);
       if (!state.weekly[week]) state.weekly[week] = { week };
-      state.weekly[week][field] = value;
-      saveData();
+      
+      if (value === '' || value === null || value === undefined) {
+        delete state.weekly[week][field];
+      } else {
+        state.weekly[week][field] = value;
+      }
+      
+      clearTimeout(state.saveTimeout);
+      state.saveTimeout = setTimeout(() => {
+        saveToFirebase('weekly/' + week, state.weekly[week]);
+        saveToLocal();
+      }, 500);
     }
 
     function getCurrentMeasurements() {
@@ -848,11 +816,21 @@
     function updateCurrentMeasurements(field, value) {
       const month = getMonthName(state.currentDate);
       if (!state.measurements[month]) state.measurements[month] = { month };
-      state.measurements[month][field] = value;
-      saveData();
+      
+      if (value === '' || value === null || value === undefined) {
+        delete state.measurements[month][field];
+      } else {
+        state.measurements[month][field] = value;
+      }
+      
+      clearTimeout(state.saveTimeout);
+      state.saveTimeout = setTimeout(() => {
+        saveToFirebase('measurements/' + month, state.measurements[month]);
+        saveToLocal();
+      }, 500);
     }
 
-    // ==================== UI RENDERING ====================
+    // UI Rendering
     function renderDateNav() {
       const date = state.currentDate;
       const dayName = getDayName(date);
@@ -863,8 +841,6 @@
       document.getElementById('dateMain').textContent = `${dayName} — ${monthDay}`;
       document.getElementById('dateSub').textContent = `Week ${week}`;
       document.getElementById('sessionBadge').textContent = session;
-      
-      // Update week numbers in other tabs
       document.getElementById('liftsWeek').textContent = week;
       document.getElementById('weeklyWeek').textContent = week;
       document.getElementById('bodyMonth').textContent = getMonthName(date);
@@ -908,13 +884,11 @@
       document.getElementById('sleep').value = entry.sleep || '';
       document.getElementById('notes').value = entry.notes || '';
 
-      // Session completed buttons
       const yesBtn = document.getElementById('sessionYes');
       const noBtn = document.getElementById('sessionNo');
       yesBtn.className = 'toggle-btn' + (entry.sessionCompleted === true ? ' active-yes' : '');
       noBtn.className = 'toggle-btn' + (entry.sessionCompleted === false ? ' active-no' : '');
 
-      // Rating buttons
       renderRatingButtons('nutritionRating', entry.nutrition, (val) => {
         updateCurrentEntry('nutrition', val);
         renderDailyTab();
@@ -928,7 +902,6 @@
 
     function renderLiftsTab() {
       const lifts = getCurrentLifts();
-      
       document.getElementById('lift-ohp').value = lifts.ohp || '';
       document.getElementById('lift-incline').value = lifts.incline || '';
       document.getElementById('lift-pullups').value = lifts.pullups || '';
@@ -939,18 +912,15 @@
 
     function renderWeeklyTab() {
       const weekly = getCurrentWeekly();
-      
       document.getElementById('weekStartWeight').value = weekly.startWeight || '';
       document.getElementById('weekEndWeight').value = weekly.endWeight || '';
       document.getElementById('weekAvgSleep').value = weekly.avgSleep || '';
       document.getElementById('weekNotes').value = weekly.notes || '';
-      
       renderSessionsButtons(weekly.sessionsCompleted);
     }
 
     function renderBodyTab() {
       const meas = getCurrentMeasurements();
-      
       document.getElementById('bodyWeight').value = meas.weight || '';
       document.getElementById('bodyWaist').value = meas.waist || '';
       document.getElementById('bodyShoulders').value = meas.shoulders || '';
@@ -959,28 +929,29 @@
       document.getElementById('bodyArmR').value = meas.armR || '';
     }
 
+    function renderCurrentTab() {
+      if (state.activeTab === 'daily') renderDailyTab();
+      else if (state.activeTab === 'lifts') renderLiftsTab();
+      else if (state.activeTab === 'weekly') renderWeeklyTab();
+      else if (state.activeTab === 'body') renderBodyTab();
+    }
+
     function switchTab(tabName) {
       state.activeTab = tabName;
       
-      // Update tab buttons
       document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.tab === tabName);
       });
       
-      // Show/hide content
       document.querySelectorAll('.tab-content').forEach(content => {
         content.style.display = 'none';
       });
       document.getElementById(tabName + '-tab').style.display = 'block';
       
-      // Render tab content
-      if (tabName === 'daily') renderDailyTab();
-      else if (tabName === 'lifts') renderLiftsTab();
-      else if (tabName === 'weekly') renderWeeklyTab();
-      else if (tabName === 'body') renderBodyTab();
+      renderCurrentTab();
     }
 
-    // ==================== REPORT GENERATION ====================
+    // Report Generation
     function generateReport() {
       const week = getWeekNumber(state.currentDate);
       const weekEntries = Object.values(state.entries).filter(e => {
@@ -1079,7 +1050,6 @@
 </body>
 </html>`;
 
-      // Download
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1093,32 +1063,30 @@
       showToast('Report downloaded!', 'success');
     }
 
-    // ==================== EVENT LISTENERS ====================
+    // Event Listeners
     function setupEventListeners() {
-      // Date navigation
       document.getElementById('prevDay').onclick = () => {
         state.currentDate.setDate(state.currentDate.getDate() - 1);
         renderDateNav();
-        switchTab(state.activeTab);
+        renderCurrentTab();
       };
 
       document.getElementById('nextDay').onclick = () => {
         state.currentDate.setDate(state.currentDate.getDate() + 1);
         renderDateNav();
-        switchTab(state.activeTab);
+        renderCurrentTab();
       };
 
-      // Tab switching
       document.querySelectorAll('.tab').forEach(tab => {
         tab.onclick = () => switchTab(tab.dataset.tab);
       });
 
       // Daily inputs
-      document.getElementById('weight').oninput = (e) => updateCurrentEntry('weight', e.target.value);
-      document.getElementById('protein').oninput = (e) => updateCurrentEntry('protein', e.target.value);
-      document.getElementById('water').oninput = (e) => updateCurrentEntry('water', e.target.value);
-      document.getElementById('sleep').oninput = (e) => updateCurrentEntry('sleep', e.target.value);
-      document.getElementById('notes').oninput = (e) => updateCurrentEntry('notes', e.target.value);
+      document.getElementById('weight').oninput = (e) => updateCurrentEntry('weight', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('protein').oninput = (e) => updateCurrentEntry('protein', e.target.value ? parseInt(e.target.value) : null);
+      document.getElementById('water').oninput = (e) => updateCurrentEntry('water', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('sleep').oninput = (e) => updateCurrentEntry('sleep', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('notes').oninput = (e) => updateCurrentEntry('notes', e.target.value || null);
 
       document.getElementById('sessionYes').onclick = () => {
         updateCurrentEntry('sessionCompleted', true);
@@ -1130,55 +1098,66 @@
       };
 
       // Lifts inputs
-      document.getElementById('lift-ohp').oninput = (e) => updateCurrentLifts('ohp', e.target.value);
-      document.getElementById('lift-incline').oninput = (e) => updateCurrentLifts('incline', e.target.value);
-      document.getElementById('lift-pullups').oninput = (e) => updateCurrentLifts('pullups', e.target.value);
-      document.getElementById('lift-row').oninput = (e) => updateCurrentLifts('row', e.target.value);
-      document.getElementById('lift-squat').oninput = (e) => updateCurrentLifts('squat', e.target.value);
-      document.getElementById('lift-rdl').oninput = (e) => updateCurrentLifts('rdl', e.target.value);
+      document.getElementById('lift-ohp').oninput = (e) => updateCurrentLifts('ohp', e.target.value || null);
+      document.getElementById('lift-incline').oninput = (e) => updateCurrentLifts('incline', e.target.value || null);
+      document.getElementById('lift-pullups').oninput = (e) => updateCurrentLifts('pullups', e.target.value || null);
+      document.getElementById('lift-row').oninput = (e) => updateCurrentLifts('row', e.target.value || null);
+      document.getElementById('lift-squat').oninput = (e) => updateCurrentLifts('squat', e.target.value || null);
+      document.getElementById('lift-rdl').oninput = (e) => updateCurrentLifts('rdl', e.target.value || null);
 
       // Weekly inputs
-      document.getElementById('weekStartWeight').oninput = (e) => updateCurrentWeekly('startWeight', e.target.value);
-      document.getElementById('weekEndWeight').oninput = (e) => updateCurrentWeekly('endWeight', e.target.value);
-      document.getElementById('weekAvgSleep').oninput = (e) => updateCurrentWeekly('avgSleep', e.target.value);
-      document.getElementById('weekNotes').oninput = (e) => updateCurrentWeekly('notes', e.target.value);
+      document.getElementById('weekStartWeight').oninput = (e) => updateCurrentWeekly('startWeight', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('weekEndWeight').oninput = (e) => updateCurrentWeekly('endWeight', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('weekAvgSleep').oninput = (e) => updateCurrentWeekly('avgSleep', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('weekNotes').oninput = (e) => updateCurrentWeekly('notes', e.target.value || null);
 
       // Body inputs
-      document.getElementById('bodyWeight').oninput = (e) => updateCurrentMeasurements('weight', e.target.value);
-      document.getElementById('bodyWaist').oninput = (e) => updateCurrentMeasurements('waist', e.target.value);
-      document.getElementById('bodyShoulders').oninput = (e) => updateCurrentMeasurements('shoulders', e.target.value);
-      document.getElementById('bodyChest').oninput = (e) => updateCurrentMeasurements('chest', e.target.value);
-      document.getElementById('bodyArmL').oninput = (e) => updateCurrentMeasurements('armL', e.target.value);
-      document.getElementById('bodyArmR').oninput = (e) => updateCurrentMeasurements('armR', e.target.value);
+      document.getElementById('bodyWeight').oninput = (e) => updateCurrentMeasurements('weight', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('bodyWaist').oninput = (e) => updateCurrentMeasurements('waist', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('bodyShoulders').oninput = (e) => updateCurrentMeasurements('shoulders', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('bodyChest').oninput = (e) => updateCurrentMeasurements('chest', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('bodyArmL').oninput = (e) => updateCurrentMeasurements('armL', e.target.value ? parseFloat(e.target.value) : null);
+      document.getElementById('bodyArmR').oninput = (e) => updateCurrentMeasurements('armR', e.target.value ? parseFloat(e.target.value) : null);
 
-      // Download report
       document.getElementById('downloadReport').onclick = generateReport;
-    }
 
-    // ==================== INITIALIZATION ====================
-    function init() {
-      loadData();
-      setupEventListeners();
-      renderDateNav();
-      renderDailyTab();
+      // Online/offline detection
+      window.addEventListener('online', () => {
+        isOnline = true;
+        updateSyncIndicator('synced');
+        updateConnectionBanner();
+      });
 
-      // Hide loading, show app
-      setTimeout(() => {
-        document.getElementById('loadingScreen').style.display = 'none';
-        document.getElementById('appContent').classList.add('loaded');
-      }, 600);
-    }
-
-    // Start app
-    document.addEventListener('DOMContentLoaded', init);
-
-    // Register Service Worker for offline support
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        // For a single-file PWA, we'll use a minimal approach
-        // The app works offline because it's a single HTML file
+      window.addEventListener('offline', () => {
+        isOnline = false;
+        updateSyncIndicator('offline');
+        updateConnectionBanner();
       });
     }
+
+    // Initialize
+    async function init() {
+      try {
+        await loadAllData();
+        setupRealtimeListeners();
+        setupEventListeners();
+        renderDateNav();
+        renderDailyTab();
+        
+        updateSyncIndicator(isOnline ? 'synced' : 'offline');
+        updateConnectionBanner();
+
+        setTimeout(() => {
+          document.getElementById('loadingScreen').style.display = 'none';
+          document.getElementById('appContent').classList.add('loaded');
+        }, 500);
+      } catch (e) {
+        console.error('Init error:', e);
+        document.getElementById('loadingText').textContent = 'Error loading app. Refresh to retry.';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
