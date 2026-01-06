@@ -17,6 +17,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
   
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     :root {
@@ -392,6 +395,7 @@
       <button class="tab active" data-tab="daily">Daily</button>
       <button class="tab" data-tab="lifts">Lifts</button>
       <button class="tab" data-tab="weekly">Weekly</button>
+      <button class="tab" data-tab="progress">Progress</button>
       <button class="tab" data-tab="body">Body</button>
     </div>
 
@@ -505,6 +509,38 @@
           <textarea class="input" id="weekNotes" placeholder="How did the week go? Issues? Adjustments needed?"></textarea>
         </div>
         <button class="btn-primary" id="downloadReport">📄 Download Week Report</button>
+      </div>
+
+      <div id="progress-tab" class="tab-content" style="display:none;">
+        <div class="section-title">Progress Charts</div>
+        
+        <div class="card">
+          <div class="card-label">Weight Trend (kg)</div>
+          <div style="position: relative; height: 200px; width: 100%;">
+            <canvas id="weightChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Running Progress</div>
+          <div style="position: relative; height: 200px; width: 100%;">
+            <canvas id="runningChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Key Lifts Progression</div>
+          <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="liftsChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Weekly Averages</div>
+          <div style="position: relative; height: 200px; width: 100%;">
+            <canvas id="weeklyChart"></canvas>
+          </div>
+        </div>
       </div>
 
       <div id="body-tab" class="tab-content" style="display:none;">
@@ -1021,14 +1057,280 @@
       updateInputIfNotFocused('bodyArmR', meas.armR);
     }
 
+    // Chart instances
+    let weightChartInstance = null;
+    let runningChartInstance = null;
+    let liftsChartInstance = null;
+    let weeklyChartInstance = null;
+
+    function destroyAllCharts() {
+      if (weightChartInstance) { weightChartInstance.destroy(); weightChartInstance = null; }
+      if (runningChartInstance) { runningChartInstance.destroy(); runningChartInstance = null; }
+      if (liftsChartInstance) { liftsChartInstance.destroy(); liftsChartInstance = null; }
+      if (weeklyChartInstance) { weeklyChartInstance.destroy(); weeklyChartInstance = null; }
+    }
+
+    function renderProgressTab() {
+      // Destroy existing charts first
+      destroyAllCharts();
+
+      // Get all entries sorted by date
+      const entries = Object.values(state.entries)
+        .filter(e => e && e.date)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      // Chart.js default styling
+      const chartDefaults = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: { color: '#94a3b8', font: { size: 11 } }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#64748b', font: { size: 10 } },
+            grid: { color: '#334155' }
+          },
+          y: {
+            ticks: { color: '#64748b', font: { size: 10 } },
+            grid: { color: '#334155' }
+          }
+        }
+      };
+
+      // 1. WEIGHT CHART
+      const weightData = entries.filter(e => e.weight);
+      const weightCtx = document.getElementById('weightChart').getContext('2d');
+      
+      weightChartInstance = new Chart(weightCtx, {
+        type: 'line',
+        data: {
+          labels: weightData.map(e => e.date.slice(5)), // MM-DD
+          datasets: [{
+            label: 'Weight (kg)',
+            data: weightData.map(e => e.weight),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: '#10b981'
+          }, {
+            label: 'Target (72kg)',
+            data: weightData.map(() => 72),
+            borderColor: '#f59e0b',
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false
+          }]
+        },
+        options: chartDefaults
+      });
+
+      // 2. RUNNING CHART
+      const runData = entries.filter(e => e.runTime);
+      const runningCtx = document.getElementById('runningChart').getContext('2d');
+      
+      runningChartInstance = new Chart(runningCtx, {
+        type: 'bar',
+        data: {
+          labels: runData.map(e => e.date.slice(5)),
+          datasets: [{
+            label: 'Time (min)',
+            data: runData.map(e => e.runTime),
+            backgroundColor: '#3b82f6',
+            borderRadius: 4
+          }, {
+            label: 'Distance (km)',
+            data: runData.map(e => e.runDistance || 0),
+            backgroundColor: '#10b981',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          ...chartDefaults,
+          scales: {
+            ...chartDefaults.scales,
+            y: {
+              ...chartDefaults.scales.y,
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+      // 3. LIFTS CHART
+      const liftsData = Object.values(state.lifts)
+        .filter(l => l && l.week)
+        .sort((a, b) => a.week - b.week);
+      
+      // Parse lift values (extract number from strings like "60kg x 8")
+      const parseLift = (str) => {
+        if (!str) return null;
+        const match = str.match(/(\d+(?:\.\d+)?)/);
+        return match ? parseFloat(match[1]) : null;
+      };
+
+      const liftsCtx = document.getElementById('liftsChart').getContext('2d');
+      
+      liftsChartInstance = new Chart(liftsCtx, {
+        type: 'line',
+        data: {
+          labels: liftsData.map(l => 'W' + l.week),
+          datasets: [{
+            label: 'Squat',
+            data: liftsData.map(l => parseLift(l.squat)),
+            borderColor: '#ef4444',
+            tension: 0.3,
+            pointRadius: 4
+          }, {
+            label: 'Incline Bench',
+            data: liftsData.map(l => parseLift(l.incline)),
+            borderColor: '#3b82f6',
+            tension: 0.3,
+            pointRadius: 4
+          }, {
+            label: 'Row',
+            data: liftsData.map(l => parseLift(l.row)),
+            borderColor: '#10b981',
+            tension: 0.3,
+            pointRadius: 4
+          }, {
+            label: 'OHP',
+            data: liftsData.map(l => parseLift(l.ohp)),
+            borderColor: '#f59e0b',
+            tension: 0.3,
+            pointRadius: 4
+          }, {
+            label: 'RDL',
+            data: liftsData.map(l => parseLift(l.rdl)),
+            borderColor: '#8b5cf6',
+            tension: 0.3,
+            pointRadius: 4
+          }]
+        },
+        options: {
+          ...chartDefaults,
+          plugins: {
+            ...chartDefaults.plugins,
+            legend: {
+              ...chartDefaults.plugins.legend,
+              position: 'bottom'
+            }
+          }
+        }
+      });
+
+      // 4. WEEKLY AVERAGES CHART
+      const weeklyAvgs = [];
+      for (let w = 1; w <= 12; w++) {
+        const weekEntries = entries.filter(e => {
+          const d = new Date(e.date);
+          return getWeekNumber(d) === w;
+        });
+        
+        if (weekEntries.length > 0) {
+          const nutrEntries = weekEntries.filter(e => e.nutrition);
+          const energyEntries = weekEntries.filter(e => e.energy);
+          const sleepEntries = weekEntries.filter(e => e.sleep);
+          
+          const avgNutrition = nutrEntries.length > 0 ? nutrEntries.reduce((sum, e) => sum + e.nutrition, 0) / nutrEntries.length : 0;
+          const avgEnergy = energyEntries.length > 0 ? energyEntries.reduce((sum, e) => sum + e.energy, 0) / energyEntries.length : 0;
+          const avgSleep = sleepEntries.length > 0 ? sleepEntries.reduce((sum, e) => sum + e.sleep, 0) / sleepEntries.length : 0;
+          
+          weeklyAvgs.push({
+            week: w,
+            nutrition: avgNutrition,
+            energy: avgEnergy,
+            sleep: avgSleep
+          });
+        }
+      }
+
+      const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+      
+      weeklyChartInstance = new Chart(weeklyCtx, {
+        type: 'line',
+        data: {
+          labels: weeklyAvgs.map(w => 'W' + w.week),
+          datasets: [{
+            label: 'Nutrition (1-10)',
+            data: weeklyAvgs.map(w => w.nutrition.toFixed(1)),
+            borderColor: '#10b981',
+            tension: 0.3,
+            pointRadius: 4,
+            yAxisID: 'y'
+          }, {
+            label: 'Energy (1-10)',
+            data: weeklyAvgs.map(w => w.energy.toFixed(1)),
+            borderColor: '#3b82f6',
+            tension: 0.3,
+            pointRadius: 4,
+            yAxisID: 'y'
+          }, {
+            label: 'Sleep (hrs)',
+            data: weeklyAvgs.map(w => w.sleep.toFixed(1)),
+            borderColor: '#8b5cf6',
+            tension: 0.3,
+            pointRadius: 4,
+            yAxisID: 'y1'
+          }]
+        },
+        options: {
+          ...chartDefaults,
+          scales: {
+            x: chartDefaults.scales.x,
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              min: 0,
+              max: 10,
+              ticks: { color: '#64748b', font: { size: 10 } },
+              grid: { color: '#334155' }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              min: 0,
+              max: 10,
+              ticks: { color: '#8b5cf6', font: { size: 10 } },
+              grid: { drawOnChartArea: false }
+            }
+          },
+          plugins: {
+            ...chartDefaults.plugins,
+            legend: {
+              ...chartDefaults.plugins.legend,
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    }
+
     function renderCurrentTab() {
       if (state.activeTab === 'daily') renderDailyTab();
       else if (state.activeTab === 'lifts') renderLiftsTab();
       else if (state.activeTab === 'weekly') renderWeeklyTab();
+      // progress tab is handled separately in switchTab to avoid re-renders
       else if (state.activeTab === 'body') renderBodyTab();
     }
 
     function switchTab(tabName) {
+      // Destroy charts when leaving progress tab
+      if (state.activeTab === 'progress' && tabName !== 'progress') {
+        destroyAllCharts();
+      }
+
+      // Force destroy and re-render when entering progress tab
+      if (tabName === 'progress') {
+        destroyAllCharts();
+      }
+
       state.activeTab = tabName;
       
       document.querySelectorAll('.tab').forEach(tab => {
@@ -1040,7 +1342,12 @@
       });
       document.getElementById(tabName + '-tab').style.display = 'block';
       
-      renderCurrentTab();
+      // For progress tab, always render fresh
+      if (tabName === 'progress') {
+        renderProgressTab();
+      } else {
+        renderCurrentTab();
+      }
     }
 
     // =====================================================
